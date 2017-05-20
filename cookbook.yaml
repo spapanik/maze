@@ -1,0 +1,42 @@
+$globals:
+  version: "8.1"
+
+install:
+  phony: true
+  keep_ts: true
+  requires:
+    - uv.lock
+  commands:
+    - uv sync --all-groups
+
+format:
+  phony: true
+  requires:
+    - install
+  commands:
+    - black .
+    - ruff check --fix-only .
+
+lint:
+  phony: true
+  requires:
+    - install
+  commands:
+    - black --check .
+    - uv lock --check
+    - ruff check .
+    - mypy .
+
+tests:
+  phony: true
+  requires:
+    - install
+  commands:
+    - pytest ${.extra}
+
+uv.lock:
+  update: true
+  requires:
+    - pyproject.toml
+  commands:
+    - uv lock

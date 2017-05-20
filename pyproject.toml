@@ -1,0 +1,157 @@
+[build-system]
+requires = [
+    "phosphorus>=0.9",
+]
+build-backend = "phosphorus.construction.api"
+
+[project]
+name = "maze"
+dynamic = [
+    "version",
+]
+
+authors = [
+    { name = "Stephanos Kuma", email = "stephanos@kuma.ai" },
+]
+license = { text = "BSD-3-Clause" }
+
+readme = "README.md"
+description = "A maze game"
+keywords = [
+    "maze",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "License :: OSI Approved :: BSD License",
+    "Intended Audience :: Developers",
+]
+
+requires-python = ">=3.11"
+dependencies = [
+    "pyutilkit~=0.10",
+]
+
+[project.urls]
+repository = "https://github.com/spapanik/maze"
+
+[project.scripts]
+maze = "maze.__main__:main"
+
+[dependency-groups]
+dev = [
+    "ipdb~=0.13",
+    "ipython~=8.21",
+]
+lint = [
+    "black~=24.10",
+    "mypy~=1.13",
+    "ruff~=0.8",
+]
+test = [
+    "pytest~=8.3",
+    "pytest-cov~=6.0",
+]
+
+[tool.phosphorus.dynamic]
+version = { file = "src/maze/__version__.py" }
+
+[tool.black]
+target-version = [
+    "py311",
+]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_decorated = true
+disallow_any_explicit = true
+disallow_any_expr = false          # many builtins are Any
+disallow_any_generics = true
+disallow_any_unimported = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+extra_checks = true
+ignore_missing_imports = true
+no_implicit_reexport = true
+show_column_numbers = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_any_decorated = false # mock.MagicMock is Any
+
+[tool.ruff]
+src = [
+    "src",
+]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+ignore = [
+    "C901",   # Adding a limit to complexity is too arbitrary
+    "COM812", # Avoid magic trailing commas
+    "D10",    # Not everything needs a docstring
+    "D203",   # Prefer `no-blank-line-before-class` (D211)
+    "D213",   # Prefer `multi-line-summary-first-line` (D212)
+    "E501",   # Avoid clashes with black
+    "PLR09",  # Adding a limit to complexity is too arbitrary
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "FBT001",  # Test arguments are handled by pytest
+    "PLR2004", # Tests should contain magic number comparisons
+    "S101",    # Pytest needs assert statements
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"mock".msg = "Use unittest.mock"
+"pytz".msg = "Use zoneinfo"
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+forced-separate = [
+    "tests",
+]
+split-on-trailing-comma = false
+
+[tool.pytest.ini_options]
+addopts = "-ra -v"
+testpaths = "tests"
+
+[tool.coverage.run]
+branch = true
+source = [
+    "src/",
+]
+data_file = ".cov_cache/coverage.dat"
+omit = [
+    "src/maze/lib/type_defs.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+fail_under = 5
+precision = 2
+show_missing = true
+skip_covered = true
+skip_empty = true
