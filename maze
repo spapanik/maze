@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import tty
+import termios
+from itertools import product
+from random import randrange, choice
+
+
+class Maze:
+    all_directions = frozenset({'up', 'down', 'left', 'right'})
+    padding = 3
+    cursor = ' * '
+    end = ' X '
+    corners = {
+        frozenset({}): ' ',
+        frozenset({'left'}): '─',
+        frozenset({'right'}): '─',
+        frozenset({'left', 'right'}): '─',
+        frozenset({'down'}): '│',
+        frozenset({'down', 'left'}): '┐',
+        frozenset({'down', 'right'}): '┌',
+        frozenset({'down', 'left', 'right'}): '┬',
+        frozenset({'up'}): '│',
+        frozenset({'up', 'left'}): '┘',
+        frozenset({'up', 'right'}): '└',
+        frozenset({'up', 'left', 'right'}): '┴',
+        frozenset({'up', 'down'}): '│',
+        frozenset({'up', 'down', 'left'}): '┤',
+        frozenset({'up', 'down', 'right'}): '├',
+        frozenset({'up', 'down', 'left', 'right'}): '┼',
+    }
+
+    def __init__(self, rows, columns, *, matrix=None, position=(0, 0)):
+        self.rows = rows
+        self.columns = columns
+        self.matrix = matrix
+        self.position = position
+        if matrix is None:
+            self.matrix = [
+                {'up', 'down', 'left', 'right'}
+                for _ in range(rows * columns)
+            ]
+            self.initialize_matrix()
+
+    def __getitem__(self, cell):
+        row = cell[0]
+        column = cell[1]
+        if not (0 <= row < self.rows and 0 <= column < self.columns):
+            return None
+        return self.matrix[row * self.columns + column]
+
+    def __setitem__(self, cell, value):
+        row = cell[0]
+        column = cell[1]
+        if not (0 <= row < self.rows and 0 <= column < self.columns):
+            raise KeyError('Coordinates are out of range.')
+        self.matrix[row * self.columns + column] = value
+
+    def __repr__(self):
+        return (
+            f'Maze({self.rows}, {self.columns}, '
+            f'matrix={self.matrix}), position={self.position}'
+        )
+
+    def __str__(self):
+        return ''.join(
+            self.cell_to_str(x, y) for x, y in product(
+                range(2 * self.rows + 1),
+                range(2 * self.columns + 1),
+            )
+        )
+
+    def cell_to_str(self, x, y):
+        cell = (x // 2, y // 2)
+        left_cell = self.left(cell)
+        up_cell = self.up(cell)
+        up_left_cell = self.up(left_cell)
+        key = set()
+        padding = 1
+
+        if x % 2 == 0 and y % 2 == 1:
+            padding = self.padding
+            if self[cell] is None or 'up' in self[cell]:
+                key = {'left', 'right'}
+
+        elif x % 2 == 1 and y % 2 == 0:
+            if self[cell] is None or 'left' in self[cell]:
+                key = {'up', 'down'}
+
+        elif x % 2 == y % 2 == 1:
+            padding = self.padding
+            if cell == self.position:
+                return self.cursor
+            if cell == (self.rows - 1, self.columns - 1):
+                return self.end
+
+        elif x < 2 * self.rows and y < 2 * self.columns:
+            up_cell = self.up(cell)
+            left_cell = self.left(cell)
+            if self[cell] and 'up' in self[cell]:
+                key.add('right')
+            if self[cell] and 'left' in self[cell]:
+                key.add('down')
+            if self[up_cell] and 'left' in self[up_cell]:
+                key.add('up')
+            if self[left_cell] and 'up' in self[left_cell]:
+                key.add('left')
+
+        elif x < 2 * self.rows:
+            key = {'down'}
+            if self[left_cell] and 'up' in self[left_cell]:
+                key.add('left')
+            if self[up_left_cell] and 'up' in self[left_cell]:
+                key.add('up')
+
+        elif y < 2 * self.columns:
+            key = {'right'}
+            if self[up_cell] and 'left' in self[up_cell]:
+                key.add('up')
+            if self[up_left_cell] and 'left' in self[up_cell]:
+                key.add('left')
+
+        else:
+            key = {'up', 'left'}
+
+        out = self.corners[frozenset(key)] * padding
+        if y == 2 * self.columns:
+            out += '\n'
+
+        return out
+
+    @staticmethod
+    def up(cell):
+        return cell[0] - 1, cell[1]
+
+    @staticmethod
+    def down(cell):
+        return cell[0] + 1, cell[1]
+
+    @staticmethod
+    def left(cell):
+        return cell[0], cell[1] - 1
+
+    @staticmethod
+    def right(cell):
+        return cell[0], cell[1] + 1
+
+    def is_visited(self, cell):
+        return self[cell] != self.all_directions
+
+    def move(self, direction):
+        if direction == 'up':
+            position = self.up(self.position)
+        elif direction == 'down':
+            position = self.down(self.position)
+        elif direction == 'left':
+            position = self.left(self.position)
+        elif direction == 'right':
+            position = self.right(self.position)
+        else:
+            return
+
+        if direction not in self[self.position]:
+            self.position = position
+
+    def initialize_matrix(self):
+        cells = self.rows * self.columns
+        cell = (randrange(self.rows), randrange(self.columns))
+        cell_stack = [cell]
+        visited_cells = 1
+        while visited_cells < cells:
+            cell = cell_stack[-1]
+
+            available_directions = []
+            if not self.is_visited(self.up(cell)):
+                available_directions.append('up')
+            if not self.is_visited(self.down(cell)):
+                available_directions.append('down')
+            if not self.is_visited(self.left(cell)):
+                available_directions.append('left')
+            if not self.is_visited(self.right(cell)):
+                available_directions.append('right')
+
+            if len(available_directions) == 0:
+                cell_stack.pop()
+            else:
+                go = choice(available_directions)
+                visited_cells += 1
+                if go == 'up':
+                    next_cell = self.up(cell)
+                    self[cell].remove('up')
+                    self[next_cell].remove('down')
+                elif go == 'down':
+                    next_cell = self.down(cell)
+                    self[cell].remove('down')
+                    self[next_cell].remove('up')
+                elif go == 'left':
+                    next_cell = self.left(cell)
+                    self[cell].remove('left')
+                    self[next_cell].remove('right')
+                elif go == 'right':
+                    next_cell = self.right(cell)
+                    self[cell].remove('right')
+                    self[next_cell].remove('left')
+                cell_stack.append(next_cell)
+
+    def player_escaped(self):
+        return self.position == (self.rows - 1, self.columns - 1)
+
+
+class CharGetter:
+    def __call__(self):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(3)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+def get_direction():
+    in_key = CharGetter()
+    while True:
+        k = in_key()
+        if k == '\x1b[A':
+            return 'up'
+        elif k == '\x1b[B':
+            return 'down'
+        elif k == '\x1b[C':
+            return 'right'
+        elif k == '\x1b[D':
+            return 'left'
+        elif k:
+            return ''
+
+
+def game_loop(maze):
+    while not maze.player_escaped():
+        os.system('clear')
+        sys.stdout.write(str(maze))
+        direction = get_direction()
+        if direction:
+            maze.move(direction)
+
+
+def game():
+    while True:
+        maze = Maze(8, 9)
+        game_loop(maze)
+        sys.stdout.write('Do you want to play another game?\n')
+        answer = input('> ')
+        if answer != 'y':
+            break
+
+if __name__ == '__main__':
+    game()
