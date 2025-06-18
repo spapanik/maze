@@ -1,0 +1,37 @@
+name: build
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-python:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        python-version:
+          - "3.14"
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+          python-version: ${{ matrix.python-version }}
+      - name: Install cli tools
+        run: |
+          uv tool install yamk
+      - name: Build the project
+        run: |
+          yam -e build

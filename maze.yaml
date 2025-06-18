@@ -1,0 +1,4 @@
+app:
+  defaults:
+    rows: 9
+    columns: 16

@@ -1,0 +1,160 @@
+[build-system]
+requires = [
+    "uv_build>=0.9.21,<0.10.0",
+]
+build-backend = "uv_build"
+
+[project]
+name = "maze"
+version = "1.0.0"
+
+authors = [
+    { name = "Stephanos Kuma", email = "stephanos@kuma.ai" },
+]
+license = { text = "BSD-3-Clause" }
+
+readme = "README.md"
+description = "A maze game"
+keywords = [
+    "maze",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "License :: OSI Approved :: BSD License",
+    "Intended Audience :: Developers",
+]
+
+requires-python = ">=3.14"
+dependencies = [
+    "dj_settings~=8.0",
+    "pyutilkit~=0.11",
+]
+
+[project.urls]
+repository = "https://github.com/spapanik/maze"
+
+[project.scripts]
+maze = "maze.__main__:main"
+
+[dependency-groups]
+dev = [
+    "ipdb~=0.13",
+    "ipython~=9.7",
+    "ptpython~=3.0",
+    { include-group = "lint" },
+    { include-group = "test" },
+]
+lint = [
+    "mypy~=1.19",  # Keep mypy for CI/CD
+    "ruff~=0.13",
+    "ty~=0.0.9",
+    "typing_extensions~=4.14",  # upgrade: py3.10: use typing module
+    { include-group = "test_core" },
+]
+test = [
+    "pytest-cov~=7.0",
+    { include-group = "test_core" },
+]
+test_core = [
+    "pytest~=9.0",
+]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_decorated = true
+disallow_any_explicit = true
+disallow_any_expr = false          # many builtins are Any
+disallow_any_generics = true
+disallow_any_unimported = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+extra_checks = true
+ignore_missing_imports = true
+no_implicit_reexport = true
+show_column_numbers = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_any_decorated = false # mock.MagicMock is Any
+
+[tool.ruff]
+src = [
+    "src",
+]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "ALL",
+]
+ignore = [
+    "C901",   # Adding a limit to complexity is too arbitrary
+    "COM812", # Avoid conflicts with the formatter
+    "D10",    # Not everything needs a docstring
+    "D203",   # Prefer `no-blank-line-before-class` (D211)
+    "D213",   # Prefer `multi-line-summary-first-line` (D212)
+    "PLR09",  # Adding a limit to complexity is too arbitrary
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "FBT001",  # Test arguments are handled by pytest
+    "PLR2004", # Tests should contain magic number comparisons
+    "S101",    # Pytest needs assert statements
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"mock".msg = "Use unittest.mock"
+"pytz".msg = "Use zoneinfo"
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+forced-separate = [
+    "tests",
+]
+split-on-trailing-comma = false
+
+[tool.pytest]
+minversion = "9.0"
+strict = true
+addopts = ["-ra", "-v"]
+testpaths = [
+    "tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "src/",
+]
+data_file = ".cov_cache/coverage.dat"
+omit = [
+    "src/**/type_defs.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "raise UnreachableCodeError",
+]
+fail_under = 20
+precision = 2
+show_missing = true
+skip_covered = true
+skip_empty = true
